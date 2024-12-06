@@ -1,0 +1,60 @@
+############################
+# SETS
+############################
+
+set Time;#monthly dates
+set Funds;#tickers
+set factors;#factors after PCA and the risk free rate
+
+############################
+# PARAMETERS
+############################
+
+param exp_ret{Funds};			
+param base{Funds};
+param monthlyRet{Time,Funds};
+param factormonthly{Time,factors};
+param Target{factors};
+param sPrice{Time,Funds};
+param budget;
+param trcost{Funds};
+param maxTrcost;
+param maxStocks;
+			
+############################
+# Variables
+############################
+
+var aux{Time,Funds} >= 0;
+var weight{Time,Funds} >= 0;
+var error{Time} >= 0;
+var shares{Time,Funds} >= 0;
+var totalTrCost{Time,Funds} >= 0;
+var b{Time,Funds} >= 0 binary;
+
+
+############################
+# Objective
+############################
+
+minimize sum{t in Time} error[t];
+
+############################
+# Constraints
+############################
+
+subject to absolute_constraint1{i in Funds}: weight[0,i] = 1;
+subject to absolute_constraint2{i in Funds,t in Time}: aux[t,i] >= weight[t,i]-weight[t-1,i];
+subject to absolute_constraint3{i in Funds}: aux[i] >= weight[t-1,i]-weight[t,i];
+subject to absolute_constraint4{t in Time}: sum{i in Funds}aux[i] = 0;
+subject to obj_constraint1{t in Time}: -error[t] + sum{i in Funds} (weight[t,i] * (monthlyRet[t,i]-factormonthly[t,0]))= sum{j in factors} (Target[j] * factormonthly[t,j]);
+subject to obj_constraint2: sum{i in Funds} weight[i] = 1;
+subject to share_constraint{t in Time,i in Funds}: sPrice[t,i] * shares[t,i] = aux[t,i] * budget;
+subject to transaction_constraint{t in Time}: sum{i in Funds} (aux[t,i] * budget * trcost[i]/sprice[t,i]) = totalTrCost[t,i];
+subject to max_constraint{t in Time}: sum{i in Funds} totalTrCost[t,i] <= maxTrcost;
+subject to binary_constraint{t in Time,i in Funds}: weight[i] <= b[t,i];
+subject to max_stock_constraint{t in Time}: sum{i in Funds} b[t,i] <= maxStocks;
+
+
+
+
